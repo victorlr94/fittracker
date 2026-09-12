@@ -41,16 +41,19 @@ entorno que siguen vigentes si vuelves a tocar el toolchain local:
   de job primero. Y `astral-sh/setup-uv` no publica tags flotantes
   (`v10`); hay que fijar la versión exacta.
 
-Avance de la Fase 1 (docs/02-roadmap.md):
-- [ ] Ingesta de `free-exercise-db` (`tools/src/fittracker_data/exercises.py`) → `app/assets/catalog/exercises.json` + `manifest.json`.
-- [ ] Siembra versionada del catálogo en la app (upsert por `(source, source_id)`, preserva `is_favorite`/`user_notes`).
-- [ ] Búsqueda y filtros (FTS ya existe en el esquema desde la Fase 0; falta la UI).
-- [ ] Ficha de ejercicio con instrucciones + imágenes bajo demanda con caché.
-- [ ] Rutinas (crear/editar/reordenar).
-- [ ] Sesión en vivo serie por serie, con cronómetro de descanso y prellenado del último registro.
-- [ ] Historial y gráficas de volumen / 1RM estimado.
+Avance de la Fase 1 (docs/02-roadmap.md) — funcionalmente completa, falta el uso real en el gimnasio:
+- [x] Ingesta de `free-exercise-db` (`tools/src/fittracker_data/exercises.py`) → 871 ejercicios en `app/assets/catalog/exercises.json` + `manifest.json`. 8/8 pruebas.
+- [x] Siembra versionada del catálogo (`data/local/catalog_seeder.dart`), upsert por `(source, source_id)` que preserva `is_favorite`/`user_notes` — probado explícitamente.
+- [x] Búsqueda FTS5 + filtros (equipo/músculo) + favoritos —
+  `features/workouts/catalog/`.
+- [x] Ficha de ejercicio con instrucciones, imágenes bajo demanda (`cached_network_image`) y notas propias.
+- [x] Rutinas: crear/renombrar/borrar, agregar/quitar/reordenar ejercicios (arrastrando) — `features/workouts/routines/`.
+- [x] Sesión en vivo: iniciar (libre o con rutina), cambiar de ejercicio, registrar series con prellenado del último registro, cronómetro de descanso con notificación local — `features/workouts/session/`.
+- [x] Historial de sesiones + gráficas de volumen y 1RM estimado por ejercicio (`fl_chart`) — `features/workouts/history/`.
+- [ ] **Pendiente real**: usarla en el gimnasio. El criterio de terminado de la fase (docs/02-roadmap.md) es de uso — tres sesiones reales — no de compilación.
+- **Deuda técnica anotada, no bloqueante**: sin pruebas de widget para las pantallas nuevas (la lógica que rompe en silencio —upsert, volumen, 1RM, regla de sesión única— ya está probada en `domain`/`data`; las pantallas se validaron con `flutter analyze` + compilación real). El cronómetro de descanso usa `inexactAllowWhileIdle` (sin permiso de alarma exacta): puede atrasarse si el teléfono entra en Doze con la pantalla apagada — aceptable para un descanso de gimnasio, no verificado en un dispositivo real todavía.
 
-**Regla de oro: una fase a la vez.** No se empieza la siguiente hasta que la actual cumpla su criterio de terminado y la CI esté en verde. Si al implementar la Fase 1 detectas algo de la Fase 2, anótalo en el roadmap y sigue. No lo implementes.
+**Regla de oro: una fase a la vez.** No se empieza la siguiente hasta que la actual cumpla su criterio de terminado y la CI esté en verde. Si al implementar una fase detectas algo de la siguiente, anótalo en el roadmap y sigue. No lo implementes.
 
 ---
 

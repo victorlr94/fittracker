@@ -194,6 +194,21 @@ class WorkoutRepository {
         .get();
   }
 
+  /// Igual que [setsForSession], pero como stream: la pantalla de sesión
+  /// en vivo se refresca sola al registrar cada serie, sin recargar a mano.
+  Stream<List<WorkoutSet>> watchSetsForSession(int sessionId) {
+    return (_db.select(_db.workoutSets)
+          ..where((s) => s.sessionId.equals(sessionId))
+          ..orderBy([(s) => OrderingTerm.asc(s.position)]))
+        .watch();
+  }
+
+  Stream<WorkoutSession?> watchActiveSession() {
+    return (_db.select(
+      _db.workoutSessions,
+    )..where((s) => s.endedAt.isNull())).watchSingleOrNull();
+  }
+
   Future<int> logSet({
     required int sessionId,
     required int exerciseId,

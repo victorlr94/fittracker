@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/db/app_database.dart';
+import '../../../data/local/repository_providers.dart';
+import 'routine_editor_page.dart';
+
+/// Lista de rutinas: plantillas reutilizables (docs/01-modelo-de-datos.md
+/// § routine). Crear/editar/reordenar ejercicios vive en
+/// [RoutineEditorPage].
+class RoutinesPage extends ConsumerStatefulWidget {
+  const RoutinesPage({super.key});
+
+  @override
+  ConsumerState<RoutinesPage> createState() => _RoutinesPageState();
+}
+
+class _RoutinesPageState extends ConsumerState<RoutinesPage> {
+  List<Routine> _routines = const [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final routines = await ref.read(workoutRepositoryProvider).listRoutines();
+    if (!mounted) return;
+    setState(() {
+      _routines = routines;
+      _loading = false;
+    });
+  }
+
+  Future<void> _createRoutine() async {
+    final name = await _promptForName(context, title: 'Nueva rutina');
+    if (name == null || name.trim().isEmpty) return;
+
+    final id = await ref
+        .read(workoutRepositoryProvider)
+        .createRoutine(name: name.trim());
+    await _load();
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => RoutineEditorPage(routineId: id)),
+    );
+    await _load();
+  }
+
+  Future<void> _deleteRoutine(Routine routine) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Borrar rutina'),
+        content: Text('¿Borrar "${routine.name}"? Tu historial de sesiones no se toca.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(workoutRepositoryProvider).deleteRoutine(routine.id);
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Rutinas')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _routines.isEmpty
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Todavía no tienes rutinas. Crea una con el botón de abajo, '
+                  'o inicia una sesión libre desde la pestaña Sesión.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : ListView.separated(
+              itemCount: _routines.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, i) {
+                final routine = _routines[i];
+                return ListTile(
+                  title: Text(routine.name),
+                  subtitle: routine.description == null
+                      ? null
+                      : Text(routine.description!),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => _deleteRoutine(routine),
+                  ),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RoutineEditorPage(routineId: routine.id),
+                      ),
+                    );
+                    await _load();
+                  },
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _createRoutine,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+Future<String?> _promptForName(
+  BuildContext context, {
+  required String title,
+  String initialValue = '',
+}) {
+  final controller = TextEditingController(text: initialValue);
+  return showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(title),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        decoration: const InputDecoration(hintText: 'Nombre'),
+        onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+          child: const Text('Guardar'),
+        ),
+      ],
+    ),
+  );
+}
