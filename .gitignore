@@ -1,0 +1,35 @@
+# --- Firma de la app: nunca en el repo (ADR-007) ---
+**/key.properties
+**/*.jks
+**/*.keystore
+
+# --- Secretos ---
+.env
+.env.*
+*.pem
+
+# --- Flutter/Dart (el .gitignore de app/ ya cubre lo específico del proyecto) ---
+**/.dart_tool/
+**/build/
+**/.flutter-plugins-dependencies
+
+# --- Python (tools/) ---
+tools/.venv/
+tools/**/__pycache__/
+tools/data/raw/
+tools/data/interim/
+*.pyc
+
+# --- Datos de Open Food Facts: ODbL, nunca se versionan (ADR-003) ---
+**/off_cache/
+
+# --- Editor / SO ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Carpeta residual del scaffold inicial (bloqueada por un proceso; borrar a mano) ---
+/app/fit_tracker/
