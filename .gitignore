@@ -13,6 +13,13 @@
 **/build/
 **/.flutter-plugins-dependencies
 
+# Código generado (Drift, Riverpod): se regenera con
+# `dart run build_runner build --delete-conflicting-outputs` (ver CLAUDE.md).
+# No se versiona para evitar que un .g.dart desincronizado del esquema
+# pase una revisión sin que nadie lo note.
+**/*.g.dart
+**/*.freezed.dart
+
 # --- Python (tools/) ---
 tools/.venv/
 tools/**/__pycache__/
