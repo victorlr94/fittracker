@@ -4,8 +4,8 @@ Regla de trabajo: **una fase a la vez**. Una fase empieza cuando la anterior cum
 
 | Fase | Alcance | Migración | Estado |
 |---|---|---|---|
-| 0 | Cimientos: toolchain, repo, CI, BD, export/import, firma | v1 | Pendiente |
-| 1 | Entrenamientos | — | Pendiente |
+| 0 | Cimientos: toolchain, repo, CI, BD, export/import, firma | v1 | **Terminada** |
+| 1 | Entrenamientos | — | En curso |
 | 2 | Comidas | — | Pendiente |
 | 3 | Recetas | — | Pendiente |
 | 4 | Estimación por foto | v2 | Pendiente |

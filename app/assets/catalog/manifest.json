@@ -1,0 +1,13 @@
+{
+  "datasets": {
+    "exercises": {
+      "license": "Unlicense",
+      "row_count": 871,
+      "sha256": "5c1a8e46b89ba9880e1e284713dfe916035b98b06f89bedc6d626bcba4a13a72",
+      "source": "yuhonas/free-exercise-db",
+      "source_ref": "a859101d633a",
+      "version": 1
+    }
+  },
+  "generated_at": "2026-09-12T21:27:47.671432+00:00"
+}

@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-fittracker-data = "fittracker_data:main"
+fittracker-data = "fittracker_data.build_all:main"
 
 [dependency-groups]
 dev = [
