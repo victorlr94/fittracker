@@ -1,0 +1,45 @@
+# Pre-commit para el proyecto de datos en tools/ (Python). El lado Flutter
+# se valida con `flutter analyze` / `flutter test` (ver CLAUDE.md), no aquí.
+#
+# Instalar:  uv run --project tools pre-commit install
+# Correr sobre todo:  uv run --project tools pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^tools/
+      - id: ruff-format
+        files: ^tools/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^tools/
+        # Agregar aquí (additional_dependencies) los stubs de tipos que
+        # hagan falta cuando download.py sume dependencias reales, p. ej.
+        # types-requests si se usa `requests`.
+        args: [--config-file=tools/pyproject.toml]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^tools/
+      - id: end-of-file-fixer
+        files: ^tools/
+      - id: check-yaml
+        files: ^tools/
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+
+  # Limpia salidas de notebooks antes de commitear (relevante desde la
+  # Fase 4, cuando exista tools/analysis/photo_eval.ipynb).
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.8.1
+    hooks:
+      - id: nbstripout
+        files: ^tools/analysis/
