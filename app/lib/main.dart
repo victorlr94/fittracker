@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/db/database_provider.dart';
 import 'features/meals/meals_placeholder.dart';
 import 'features/recipes/recipes_placeholder.dart';
-import 'features/settings/settings_placeholder.dart';
+import 'features/settings/settings_page.dart';
 import 'features/workouts/workouts_placeholder.dart';
 
 void main() {
@@ -45,7 +45,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
     WorkoutsPlaceholderPage(),
     MealsPlaceholderPage(),
     RecipesPlaceholderPage(),
-    SettingsPlaceholderPage(),
+    SettingsPage(),
   ];
 
   @override
