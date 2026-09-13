@@ -7,17 +7,11 @@ import '../../../core/db/app_database.dart';
 import '../../../core/notifications/rest_timer_notifications.dart';
 import '../../../data/local/repository_providers.dart';
 import '../../../domain/entities/set_type.dart';
-import '../../../domain/entities/workout_exceptions.dart';
 import '../catalog/exercise_catalog_page.dart';
 import 'log_set_sheet.dart';
+import 'session_starter.dart';
 
 const _defaultRestDuration = Duration(seconds: 90);
-
-String _todayLocalDate() {
-  final now = DateTime.now();
-  String p2(int n) => n.toString().padLeft(2, '0');
-  return '${now.year}-${p2(now.month)}-${p2(now.day)}';
-}
 
 /// Sesión en vivo: iniciar (con o sin rutina), registrar series una por
 /// una con prellenado y cronómetro de descanso, y terminar
@@ -34,6 +28,7 @@ class LiveSessionPage extends ConsumerStatefulWidget {
 class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
   WorkoutSession? _session;
   int? _selectedRoutineIdForStart;
+  String? _activeRoutineName;
 
   List<Exercise> _sessionExercises = const [];
   int? _selectedExerciseId;
@@ -72,6 +67,7 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
         _sessionExercises = const [];
         _selectedExerciseId = null;
         _currentSets = const [];
+        _activeRoutineName = null;
       });
       return;
     }
@@ -87,8 +83,12 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
     final workoutRepo = ref.read(workoutRepositoryProvider);
     final exerciseRepo = ref.read(exerciseRepositoryProvider);
 
+    String? routineName;
     final ids = <int>[];
     if (session.routineId != null) {
+      routineName = (await workoutRepo.getRoutineById(session.routineId!))
+          ?.name;
+
       final routineExercises = await workoutRepo.exercisesForRoutine(
         session.routineId!,
       );
@@ -108,6 +108,7 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
     if (!mounted) return;
     setState(() {
       _sessionExercises = exercises;
+      _activeRoutineName = routineName;
       _selectedExerciseId ??= exercises.isNotEmpty ? exercises.first.id : null;
     });
   }
@@ -120,19 +121,12 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
       .where((s) => s.exerciseId == _selectedExerciseId)
       .toList();
 
-  Future<void> _startSession() async {
-    try {
-      await ref
-          .read(workoutRepositoryProvider)
-          .startSession(
-            routineId: _selectedRoutineIdForStart,
-            sessionDate: _todayLocalDate(),
-            tzOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
-          );
-    } on ActiveSessionAlreadyExistsException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
-    }
+  Future<void> _startSession() {
+    return startSessionWithConfirmation(
+      context,
+      ref,
+      routineId: _selectedRoutineIdForStart,
+    );
   }
 
   Future<void> _endSession() async {
@@ -306,7 +300,11 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
   Widget _buildActiveSession(WorkoutSession session) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sesión en curso'),
+        title: Text(
+          _activeRoutineName == null
+              ? 'Sesión libre en curso'
+              : 'Sesión: $_activeRoutineName',
+        ),
         actions: [
           TextButton(
             onPressed: _endSession,

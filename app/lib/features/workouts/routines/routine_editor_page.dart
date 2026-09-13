@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/db/app_database.dart';
 import '../../../data/local/repository_providers.dart';
 import '../catalog/exercise_catalog_page.dart';
+import '../session/session_starter.dart';
+import '../workouts_tab_index.dart';
 
 class _RoutineItem {
   const _RoutineItem(this.routineExercise, this.exercise);
@@ -87,7 +89,21 @@ class _RoutineEditorPageState extends ConsumerState<RoutineEditorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Editar rutina')),
+      appBar: AppBar(
+        title: const Text('Editar rutina'),
+        actions: [
+          IconButton(
+            tooltip: 'Iniciar sesión con esta rutina',
+            icon: const Icon(Icons.play_circle_outline),
+            onPressed: () => startSessionWithConfirmation(
+              context,
+              ref,
+              routineId: widget.routineId,
+              switchToTabIndex: kSessionTabIndex,
+            ),
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _items.isEmpty

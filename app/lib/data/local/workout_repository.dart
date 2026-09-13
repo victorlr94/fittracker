@@ -46,6 +46,15 @@ class WorkoutRepository {
         .get();
   }
 
+  /// Sin filtrar por `deletedAt`: una sesión pasada puede apuntar a una
+  /// rutina que después se borró, y aun así se quiere poder mostrar su
+  /// nombre en el historial o en la sesión activa.
+  Future<Routine?> getRoutineById(int id) {
+    return (_db.select(
+      _db.routines,
+    )..where((r) => r.id.equals(id))).getSingleOrNull();
+  }
+
   Future<int> createRoutine({required String name, String? description}) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return _db.into(_db.routines).insert(

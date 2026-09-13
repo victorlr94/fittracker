@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/app_database.dart';
 import '../../../data/local/repository_providers.dart';
+import '../session/session_starter.dart';
+import '../workouts_tab_index.dart';
 import 'routine_editor_page.dart';
 
 /// Lista de rutinas: plantillas reutilizables (docs/01-modelo-de-datos.md
@@ -91,9 +93,24 @@ class RoutinesPage extends ConsumerWidget {
                     subtitle: routine.description == null
                         ? null
                         : Text(routine.description!),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _deleteRoutine(context, ref, routine),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Iniciar sesión con esta rutina',
+                          icon: const Icon(Icons.play_circle_outline),
+                          onPressed: () => startSessionWithConfirmation(
+                            context,
+                            ref,
+                            routineId: routine.id,
+                            switchToTabIndex: kSessionTabIndex,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _deleteRoutine(context, ref, routine),
+                        ),
+                      ],
                     ),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(

@@ -25,6 +25,8 @@ class WorkoutsHomePage extends StatelessWidget {
             color: Theme.of(context).colorScheme.surface,
             child: SafeArea(
               bottom: false,
+              // Si cambia el orden de las pestañas, actualizar también
+              // kSessionTabIndex en workouts_tab_index.dart.
               child: const TabBar(
                 tabs: [
                   Tab(text: 'Sesión'),
