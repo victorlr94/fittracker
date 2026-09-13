@@ -33,7 +33,6 @@ class LiveSessionPage extends ConsumerStatefulWidget {
 
 class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
   WorkoutSession? _session;
-  List<Routine> _routines = const [];
   int? _selectedRoutineIdForStart;
 
   List<Exercise> _sessionExercises = const [];
@@ -49,7 +48,6 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
   @override
   void initState() {
     super.initState();
-    _loadRoutinesForStartPicker();
     _sessionSub = ref
         .read(workoutRepositoryProvider)
         .watchActiveSession()
@@ -62,12 +60,6 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
     _setsSub?.cancel();
     _restTicker?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadRoutinesForStartPicker() async {
-    final routines = await ref.read(workoutRepositoryProvider).listRoutines();
-    if (!mounted) return;
-    setState(() => _routines = routines);
   }
 
   Future<void> _onSessionChanged(WorkoutSession? session) async {
@@ -261,6 +253,11 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
   }
 
   Widget _buildStartScreen() {
+    // routinesProvider es reactivo: crear o borrar una rutina en la
+    // pestaña Rutinas se refleja aquí solo, sin depender de que esta
+    // pestaña se reconstruya al cambiar de tab.
+    final routinesAsync = ref.watch(routinesProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Sesión')),
       body: Center(
@@ -271,18 +268,27 @@ class _LiveSessionPageState extends ConsumerState<LiveSessionPage> {
             children: [
               const Text('No hay una sesión en curso.'),
               const SizedBox(height: 16),
-              DropdownButtonFormField<int?>(
-                initialValue: _selectedRoutineIdForStart,
-                decoration: const InputDecoration(
-                  labelText: 'Rutina (opcional)',
-                  border: OutlineInputBorder(),
+              routinesAsync.when(
+                loading: () => const CircularProgressIndicator(),
+                error: (error, stackTrace) =>
+                    Text('No se pudieron cargar las rutinas: $error'),
+                data: (routines) => DropdownButtonFormField<int?>(
+                  initialValue: _selectedRoutineIdForStart,
+                  decoration: const InputDecoration(
+                    labelText: 'Rutina (opcional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('Sesión libre'),
+                    ),
+                    for (final r in routines)
+                      DropdownMenuItem(value: r.id, child: Text(r.name)),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _selectedRoutineIdForStart = v),
                 ),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Sesión libre')),
-                  for (final r in _routines)
-                    DropdownMenuItem(value: r.id, child: Text(r.name)),
-                ],
-                onChanged: (v) => setState(() => _selectedRoutineIdForStart = v),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(

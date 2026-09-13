@@ -169,7 +169,7 @@ class _ExerciseCatalogPageState extends ConsumerState<ExerciseCatalogPage> {
                           ].join(' · '),
                         ),
                         trailing: widget.pickerMode
-                            ? null
+                            ? const Icon(Icons.chevron_right)
                             : IconButton(
                                 icon: Icon(
                                   exercise.isFavorite
@@ -178,9 +178,24 @@ class _ExerciseCatalogPageState extends ConsumerState<ExerciseCatalogPage> {
                                 ),
                                 onPressed: () => _toggleFavorite(exercise),
                               ),
-                        onTap: () {
+                        onTap: () async {
                           if (widget.pickerMode) {
-                            Navigator.of(context).pop(exercise.id);
+                            // Primero una previsualización (imagen,
+                            // músculos, instrucciones): recién ahí se
+                            // confirma o se regresa a seguir buscando,
+                            // en vez de agregarlo a ciegas al tocarlo.
+                            final confirmed = await Navigator.of(context)
+                                .push<bool>(
+                                  MaterialPageRoute(
+                                    builder: (_) => ExerciseDetailPage(
+                                      exerciseId: exercise.id,
+                                      selectionMode: true,
+                                    ),
+                                  ),
+                                );
+                            if (confirmed == true && context.mounted) {
+                              Navigator.of(context).pop(exercise.id);
+                            }
                           } else {
                             Navigator.of(context).push(
                               MaterialPageRoute(

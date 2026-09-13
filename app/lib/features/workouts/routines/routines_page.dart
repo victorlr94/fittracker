@@ -8,53 +8,40 @@ import 'routine_editor_page.dart';
 /// Lista de rutinas: plantillas reutilizables (docs/01-modelo-de-datos.md
 /// § routine). Crear/editar/reordenar ejercicios vive en
 /// [RoutineEditorPage].
-class RoutinesPage extends ConsumerStatefulWidget {
+///
+/// Usa [routinesProvider] (reactivo) en vez de una lista cacheada en
+/// estado local: así el selector de rutina de la pestaña Sesión se entera
+/// de inmediato cuando se crea o borra una aquí, sin depender de que esa
+/// pestaña se reconstruya.
+class RoutinesPage extends ConsumerWidget {
   const RoutinesPage({super.key});
 
-  @override
-  ConsumerState<RoutinesPage> createState() => _RoutinesPageState();
-}
-
-class _RoutinesPageState extends ConsumerState<RoutinesPage> {
-  List<Routine> _routines = const [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final routines = await ref.read(workoutRepositoryProvider).listRoutines();
-    if (!mounted) return;
-    setState(() {
-      _routines = routines;
-      _loading = false;
-    });
-  }
-
-  Future<void> _createRoutine() async {
+  Future<void> _createRoutine(BuildContext context, WidgetRef ref) async {
     final name = await _promptForName(context, title: 'Nueva rutina');
     if (name == null || name.trim().isEmpty) return;
 
     final id = await ref
         .read(workoutRepositoryProvider)
         .createRoutine(name: name.trim());
-    await _load();
-    if (!mounted) return;
+    ref.invalidate(routinesProvider);
+    if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => RoutineEditorPage(routineId: id)),
     );
-    await _load();
   }
 
-  Future<void> _deleteRoutine(Routine routine) async {
+  Future<void> _deleteRoutine(
+    BuildContext context,
+    WidgetRef ref,
+    Routine routine,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Borrar rutina'),
-        content: Text('¿Borrar "${routine.name}"? Tu historial de sesiones no se toca.'),
+        content: Text(
+          '¿Borrar "${routine.name}"? Tu historial de sesiones no se toca.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -69,53 +56,57 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     );
     if (confirmed != true) return;
     await ref.read(workoutRepositoryProvider).deleteRoutine(routine.id);
-    await _load();
+    ref.invalidate(routinesProvider);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routinesAsync = ref.watch(routinesProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Rutinas')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _routines.isEmpty
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'Todavía no tienes rutinas. Crea una con el botón de abajo, '
-                  'o inicia una sesión libre desde la pestaña Sesión.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          : ListView.separated(
-              itemCount: _routines.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final routine = _routines[i];
-                return ListTile(
-                  title: Text(routine.name),
-                  subtitle: routine.description == null
-                      ? null
-                      : Text(routine.description!),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _deleteRoutine(routine),
+      body: routinesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) =>
+            Center(child: Text('No se pudieron cargar las rutinas: $error')),
+        data: (routines) => routines.isEmpty
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Todavía no tienes rutinas. Crea una con el botón de '
+                    'abajo, o inicia una sesión libre desde la pestaña '
+                    'Sesión.',
+                    textAlign: TextAlign.center,
                   ),
-                  onTap: () async {
-                    await Navigator.of(context).push(
+                ),
+              )
+            : ListView.separated(
+                itemCount: routines.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final routine = routines[i];
+                  return ListTile(
+                    title: Text(routine.name),
+                    subtitle: routine.description == null
+                        ? null
+                        : Text(routine.description!),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => _deleteRoutine(context, ref, routine),
+                    ),
+                    onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => RoutineEditorPage(routineId: routine.id),
+                        builder: (_) =>
+                            RoutineEditorPage(routineId: routine.id),
                       ),
-                    );
-                    await _load();
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              ),
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _createRoutine,
+        onPressed: () => _createRoutine(context, ref),
         child: const Icon(Icons.add),
       ),
     );

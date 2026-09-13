@@ -10,10 +10,20 @@ import '../../../data/local/repository_providers.dart';
 
 /// Ficha de ejercicio: instrucciones, músculos, imágenes bajo demanda con
 /// caché (docs/00-decisiones.md, "APK ligero") y notas propias.
+///
+/// Con [selectionMode] en true (al elegir un ejercicio para una rutina o
+/// una sesión) se agrega una barra inferior para confirmar o regresar a
+/// la lista sin elegir — así se puede ver la imagen antes de decidir,
+/// en vez de agregar el ejercicio a ciegas con solo el nombre en inglés.
 class ExerciseDetailPage extends ConsumerStatefulWidget {
-  const ExerciseDetailPage({required this.exerciseId, super.key});
+  const ExerciseDetailPage({
+    required this.exerciseId,
+    this.selectionMode = false,
+    super.key,
+  });
 
   final int exerciseId;
+  final bool selectionMode;
 
   @override
   ConsumerState<ExerciseDetailPage> createState() =>
@@ -191,8 +201,23 @@ class _ExerciseDetailPageState extends ConsumerState<ExerciseDetailPage> {
             ),
             onChanged: _onNotesChanged,
           ),
+          if (widget.selectionMode)
+            // Espacio para que la barra inferior no tape las notas.
+            const SizedBox(height: 72),
         ],
       ),
+      bottomNavigationBar: widget.selectionMode
+          ? SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Agregar este ejercicio'),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }
