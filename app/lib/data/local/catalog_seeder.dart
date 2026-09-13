@@ -18,24 +18,37 @@ class CatalogSeeder {
   static const _exercisesVersionKey = 'catalog_version_exercises';
 
   Future<void> seedIfNeeded() async {
+    final bundledVersion = await _bundledExercisesVersion();
+    if (bundledVersion == null) return;
+
+    final installed = await _getVersion(_exercisesVersionKey);
+    if (installed != null && installed >= bundledVersion) {
+      return;
+    }
+    await _reseedExercises(bundledVersion);
+  }
+
+  /// Resiembra sin importar la versión instalada — red de seguridad para
+  /// cuando el contenido del catálogo cambió (p. ej. una traducción) sin
+  /// que el número de versión lo refleje, o para depurar en el
+  /// dispositivo sin tener que reinstalar. Ver pantalla de Ajustes.
+  Future<void> forceReseedExercises() async {
+    final bundledVersion = await _bundledExercisesVersion();
+    if (bundledVersion == null) return;
+    await _reseedExercises(bundledVersion);
+  }
+
+  Future<int?> _bundledExercisesVersion() async {
     final manifestText = await rootBundle.loadString(
       'assets/catalog/manifest.json',
     );
     final manifest = jsonDecode(manifestText) as Map<String, dynamic>;
     final datasets = manifest['datasets'] as Map<String, dynamic>? ?? const {};
-
     final exercisesEntry = datasets['exercises'] as Map<String, dynamic>?;
-    if (exercisesEntry != null) {
-      await _seedExercisesIfNeeded(exercisesEntry['version'] as int);
-    }
+    return exercisesEntry?['version'] as int?;
   }
 
-  Future<void> _seedExercisesIfNeeded(int bundledVersion) async {
-    final installed = await _getVersion(_exercisesVersionKey);
-    if (installed != null && installed >= bundledVersion) {
-      return;
-    }
-
+  Future<void> _reseedExercises(int bundledVersion) async {
     final exercisesText = await rootBundle.loadString(
       'assets/catalog/exercises.json',
     );
@@ -49,12 +62,17 @@ class CatalogSeeder {
     });
   }
 
+  /// Versión del catálogo de ejercicios instalada en este dispositivo
+  /// (`null` si nunca se ha sembrado). Se muestra en Ajustes.
+  Future<int?> installedExercisesVersion() => _getVersion(_exercisesVersionKey);
+
   ExercisesCompanion _toCompanion(Map<String, dynamic> row) {
     final now = DateTime.now().millisecondsSinceEpoch;
     return ExercisesCompanion.insert(
       source: row['source'] as String,
       sourceId: Value(row['source_id'] as String?),
       name: row['name'] as String,
+      nameEs: Value(row['name_es'] as String?),
       force: Value(row['force'] as String?),
       level: Value(row['level'] as String?),
       mechanic: Value(row['mechanic'] as String?),

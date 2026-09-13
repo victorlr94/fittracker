@@ -4,8 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/db/app_database.dart';
 import '../../core/db/database_provider.dart';
 import '../../core/export/export_service.dart';
+import '../../data/local/catalog_seeder.dart';
 
 /// Ajustes. En la Fase 0 solo vive aquí la exportación/importación
 /// (docs/00-decisiones.md ADR-007, docs/02-roadmap.md Fase 0). Objetivos
@@ -44,6 +46,26 @@ class SettingsPage extends ConsumerWidget {
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 8),
+          Text('Catálogo de ejercicios', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text(
+            'Si los nombres, el equipo o los músculos se ven en inglés '
+            'después de una actualización, es porque la app todavía no '
+            'resembró el catálogo. Este botón lo fuerza sin esperar a la '
+            'siguiente versión.',
+            style: TextStyle(color: Colors.black54),
+          ),
+          const SizedBox(height: 8),
+          _CatalogVersionRow(db: ref.watch(appDatabaseProvider)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _forceReseedCatalog(context, ref),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Actualizar catálogo ahora'),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 8),
           const Text(
             'Objetivos nutricionales y la clave de la API de Claude '
             '(para el módulo de foto) se configuran aquí en fases '
@@ -53,6 +75,21 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _forceReseedCatalog(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await CatalogSeeder(db).forceReseedExercises();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Catálogo actualizado.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('No se pudo actualizar el catálogo: $e')),
+      );
+    }
   }
 
   Future<void> _exportNow(BuildContext context, WidgetRef ref) async {
@@ -146,5 +183,27 @@ class SettingsPage extends ConsumerWidget {
         SnackBar(content: Text('No se pudo restaurar: $e')),
       );
     }
+  }
+}
+
+class _CatalogVersionRow extends StatelessWidget {
+  const _CatalogVersionRow({required this.db});
+
+  final AppDatabase db;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<int?>(
+      future: CatalogSeeder(db).installedExercisesVersion(),
+      builder: (context, snapshot) {
+        final version = snapshot.data;
+        return Text(
+          version == null
+              ? 'Versión instalada: (todavía no se siembra)'
+              : 'Versión instalada: $version',
+          style: const TextStyle(color: Colors.black54),
+        );
+      },
+    );
   }
 }

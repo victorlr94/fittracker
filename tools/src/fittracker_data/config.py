@@ -29,4 +29,6 @@ FREE_EXERCISE_DB_IMAGE_BASE_URL = (
 # en el dispositivo. Se sube a mano cuando el contenido cambia de forma
 # que amerite resembrar (no cada vez que se regenera el archivo).
 # v2: nombres, equipo y músculos traducidos al español.
-EXERCISES_CATALOG_VERSION = 2
+# v3: v2 nunca llegó a escribir name_es en la app (bug en
+# CatalogSeeder._toCompanion, corregido) — hay que resembrar de nuevo.
+EXERCISES_CATALOG_VERSION = 3
