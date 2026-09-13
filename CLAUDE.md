@@ -22,14 +22,14 @@ Lee, en este orden, solo lo que aplique a la fase en curso:
 
 ## Fase actual
 
-> **Fase 1 — Entrenamientos. En curso.**
+> **Fase 2 — Comidas. En curso.**
 > Actualiza esta línea al terminar cada fase. Es el primer lugar donde mira una sesión nueva.
 
 **Fase 0 — terminada (2026-09-12).** Repo público en GitHub
 (https://github.com/victorlr94/fittracker), CI en verde (Flutter +
 Python), APK de release instalado y probado en un dispositivo real.
-Detalle completo en el PR #1 y en el historial de `main`. Dos notas de
-entorno que siguen vigentes si vuelves a tocar el toolchain local:
+Detalle completo en el PR #1 y en el historial de `main`. Notas de
+entorno que siguen vigentes si vuelves a tocar el toolchain local o CI:
 - El `sdkmanager.bat` de las cmdline-tools nuevas delega a `android.exe`
   y falla con paquetes que llevan `;` en el nombre — instalar a mano con
   `android.exe sdk install ndk/<versión>` (sintaxis de barra).
@@ -40,20 +40,50 @@ entorno que siguen vigentes si vuelves a tocar el toolchain local:
   step ("Unrecognized named-value") — hay que pasarlo por `env:` a nivel
   de job primero. Y `astral-sh/setup-uv` no publica tags flotantes
   (`v10`); hay que fijar la versión exacta.
+- `flutter_local_notifications` exige `isCoreLibraryDesugaringEnabled`
+  en `android/app/build.gradle.kts`.
+- **`android:uses-permission INTERNET` no lo agrega Flutter por
+  defecto.** Sin él, cualquier petición de red falla en el sistema
+  operativo sin excepción visible — es fácil no notarlo hasta que
+  alguien prueba la app de verdad en un dispositivo. Ya está en el
+  manifiesto; si algún módulo de red futuro (USDA, Open Food Facts,
+  Claude) parece no conectar nunca, revisar esto primero.
+- Cuando `riverpod_generator` falle con `InvalidTypeException` al
+  serializar el tipo de retorno de un provider: es una clase que Drift
+  genera en un archivo `part` (p. ej. `Routine`, `Exercise`) — escribe
+  ese provider a mano (`FutureProvider`/`StreamProvider` normal) en vez
+  de con `@riverpod`. Ejemplo: `data/local/repository_providers.dart`.
 
-Avance de la Fase 1 (docs/02-roadmap.md) — funcionalmente completa, falta el uso real en el gimnasio:
-- [x] Ingesta de `free-exercise-db` (`tools/src/fittracker_data/exercises.py`) → 871 ejercicios en `app/assets/catalog/exercises.json` + `manifest.json`. 8/8 pruebas.
-- [x] Siembra versionada del catálogo (`data/local/catalog_seeder.dart`), upsert por `(source, source_id)` que preserva `is_favorite`/`user_notes` — probado explícitamente.
-- [x] Búsqueda FTS5 + filtros (equipo/músculo) + favoritos —
-  `features/workouts/catalog/`.
-- [x] Ficha de ejercicio con instrucciones, imágenes bajo demanda (`cached_network_image`) y notas propias.
-- [x] Rutinas: crear/renombrar/borrar, agregar/quitar/reordenar ejercicios (arrastrando) — `features/workouts/routines/`.
-- [x] Sesión en vivo: iniciar (libre o con rutina), cambiar de ejercicio, registrar series con prellenado del último registro, cronómetro de descanso con notificación local — `features/workouts/session/`.
-- [x] Historial de sesiones + gráficas de volumen y 1RM estimado por ejercicio (`fl_chart`) — `features/workouts/history/`.
-- [ ] **Pendiente real**: usarla en el gimnasio. El criterio de terminado de la fase (docs/02-roadmap.md) es de uso — tres sesiones reales — no de compilación.
-- **Deuda técnica anotada, no bloqueante**: sin pruebas de widget para las pantallas nuevas (la lógica que rompe en silencio —upsert, volumen, 1RM, regla de sesión única— ya está probada en `domain`/`data`; las pantallas se validaron con `flutter analyze` + compilación real). El cronómetro de descanso usa `inexactAllowWhileIdle` (sin permiso de alarma exacta): puede atrasarse si el teléfono entra en Doze con la pantalla apagada — aceptable para un descanso de gimnasio, no verificado en un dispositivo real todavía.
+**Fase 1 — terminada (2026-09-13).** PR #2 fusionado a `main`. Catálogo
+de 871 ejercicios (`free-exercise-db`) traducido al español (nombres,
+equipo, músculos) vía Claude Opus 5; búsqueda FTS5 con filtros y
+favoritos; rutinas con reordenamiento; sesión en vivo con prellenado y
+cronómetro de descanso; historial con gráficas de volumen/1RM. Usada de
+verdad por el usuario en el gimnasio, con dos bugs reales encontrados y
+corregidos en el camino:
+- `CatalogSeeder._toCompanion` nunca mapeaba `name_es` al construir la
+  fila del upsert — los nombres se quedaban en inglés sin importar
+  cuántas veces se resembrara. Ahora hay una prueba
+  (`catalog_seeder_test.dart`) que lo habría atrapado antes.
+- La lista de rutinas del selector de "Sesión" se cargaba una sola vez
+  y nunca se refrescaba entre pestañas — se volvió reactiva
+  (`routinesProvider`, escrito a mano por el punto anterior).
+
+Deuda técnica anotada, no bloqueante para seguir: sin pruebas de widget
+(la lógica que rompe en silencio ya está probada en `domain`/`data`); el
+cronómetro de descanso usa `inexactAllowWhileIdle` (sin permiso de
+alarma exacta), puede atrasarse si el teléfono entra en Doze con la
+pantalla apagada.
 
 **Regla de oro: una fase a la vez.** No se empieza la siguiente hasta que la actual cumpla su criterio de terminado y la CI esté en verde. Si al implementar una fase detectas algo de la siguiente, anótalo en el roadmap y sigue. No lo implementes.
+
+Avance de la Fase 2 (docs/02-roadmap.md):
+- [ ] Ingesta de USDA FoodData Central (Foundation Foods + SR Legacy) → `app/assets/catalog/foods_usda.json`.
+- [ ] Siembra versionada de alimentos (mismo patrón que exercise: upsert por `(source, source_id)`, preserva favoritos/notas).
+- [ ] Búsqueda FTS + registro por momento del día (desayuno/comida/cena/snack), porciones editables.
+- [ ] Totales diarios contra el objetivo (`nutrition_target`).
+- [ ] Alimentos propios (crear desde cero o desde etiqueta).
+- [ ] Código de barras vía Open Food Facts, con alta manual como *fallback* obligatorio (cobertura mexicana irregular — no es opcional, ver docs/02-roadmap.md).
 
 ---
 
