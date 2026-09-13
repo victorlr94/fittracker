@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter NO la agrega por defecto. Sin esto, cualquier petición de
+         red (imágenes del catálogo ahora; USDA/Open Food Facts/Claude en
+         fases futuras) falla en el sistema operativo antes de llegar a
+         Dart — sin excepción visible, así que es fácil no notarlo hasta
+         que alguien prueba la app de verdad en un dispositivo. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Para el cronómetro de descanso (flutter_local_notifications):
          reprograma la notificación pendiente si el celular se reinicia
          mientras hay un descanso en curso. POST_NOTIFICATIONS y VIBRATE
