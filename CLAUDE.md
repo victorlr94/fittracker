@@ -22,25 +22,38 @@ Lee, en este orden, solo lo que aplique a la fase en curso:
 
 ## Fase actual
 
-> **Fase 0 — Cimientos. En curso.**
+> **Fase 1 — Entrenamientos. En curso.**
 > Actualiza esta línea al terminar cada fase. Es el primer lugar donde mira una sesión nueva.
 
-Avance de la Fase 0 (2026-09-12):
-- [x] Toolchain: Flutter 3.47.4 (`C:\Users\victo\flutter`), Android SDK 36, NDK 28.2.13676358.
-- [x] Proyecto Flutter en `app/`, solo Android + iOS. `applicationId = io.github.victorlr94.fittracker` (no cambiar: ver ADR-007).
-- [x] `git init`, rama `fase-0-cimientos`. Repo aún no está en GitHub — falta crear el remoto y hacer push (pendiente, acción del usuario/próxima sesión).
-- [x] Estructura de capas (`core/`, `domain/`, `data/`, `features/`) creada; `domain/` sigue vacía porque la lógica de negocio llega con las features de Fase 1+.
-- [x] Esquema Drift v1 completo (13 tablas + FTS5 + triggers), con esqueleto de navegación de 4 pestañas. `test/core/app_database_test.dart` (9 casos).
-- [x] Exportación/importación completas (`lib/core/export/`, pantalla real en Ajustes). `test/core/export_service_test.dart` prueba el criterio de terminado (exportar → reinstalar → importar → datos idénticos), 5 casos.
-- [x] Keystore de release generado (`android/fittracker-upload-keystore.jks`, PKCS12, alias `fittracker`) y firma configurada en `build.gradle.kts`. **Pendiente del usuario:** respaldar el `.jks` + `key.properties` en un gestor de contraseñas o carpeta cifrada fuera del repo (ADR-007) — hoy solo existen en este disco.
-- [x] `tools/`: paquete `fittracker_data` con uv + Ruff + mypy, sin scripts de ingesta (llegan en Fases 1 y 2).
-- [x] `.github/workflows/ci.yml`: jobs `flutter` (analyze/test/build APK firmado) y `python` (ruff/mypy/pytest). No validado en GitHub todavía — no hay remoto.
-- [ ] Secretos de CI (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) — se configuran al crear el repo en GitHub.
-- [ ] Ciclo de respaldo verificado **a mano en el dispositivo real** (el criterio de terminado de la Fase 0 es de uso, no de compilación: exportar → desinstalar → reinstalar → importar).
+**Fase 0 — terminada (2026-09-12).** Repo público en GitHub
+(https://github.com/victorlr94/fittracker), CI en verde (Flutter +
+Python), APK de release instalado y probado en un dispositivo real.
+Detalle completo en el PR #1 y en el historial de `main`. Dos notas de
+entorno que siguen vigentes si vuelves a tocar el toolchain local:
+- El `sdkmanager.bat` de las cmdline-tools nuevas delega a `android.exe`
+  y falla con paquetes que llevan `;` en el nombre — instalar a mano con
+  `android.exe sdk install ndk/<versión>` (sintaxis de barra).
+- El compilador incremental de Kotlin se cuelga en este Windows al
+  cerrar sus cachés; `kotlin.incremental=false` en
+  `android/gradle.properties` es el workaround, ya aplicado.
+- En CI, GitHub Actions no permite `secrets` directo en un `if:` de
+  step ("Unrecognized named-value") — hay que pasarlo por `env:` a nivel
+  de job primero. Y `astral-sh/setup-uv` no publica tags flotantes
+  (`v10`); hay que fijar la versión exacta.
 
-Nota del entorno local: el `sdkmanager.bat` de estas cmdline-tools delega a `android.exe` y falla cuando Gradle le pide un paquete con `;`. Si Gradle no puede autoinstalar un componente, instálalo a mano con la sintaxis de barra: `android.exe sdk install ndk/<versión>`. Además, el compilador incremental de Kotlin falla en este Windows al cerrar sus cachés (`kotlin.incremental=false` en `android/gradle.properties` es el workaround, ya aplicado).
+Avance de la Fase 1 (docs/02-roadmap.md) — funcionalmente completa, falta el uso real en el gimnasio:
+- [x] Ingesta de `free-exercise-db` (`tools/src/fittracker_data/exercises.py`) → 871 ejercicios en `app/assets/catalog/exercises.json` + `manifest.json`. 8/8 pruebas.
+- [x] Siembra versionada del catálogo (`data/local/catalog_seeder.dart`), upsert por `(source, source_id)` que preserva `is_favorite`/`user_notes` — probado explícitamente.
+- [x] Búsqueda FTS5 + filtros (equipo/músculo) + favoritos —
+  `features/workouts/catalog/`.
+- [x] Ficha de ejercicio con instrucciones, imágenes bajo demanda (`cached_network_image`) y notas propias.
+- [x] Rutinas: crear/renombrar/borrar, agregar/quitar/reordenar ejercicios (arrastrando) — `features/workouts/routines/`.
+- [x] Sesión en vivo: iniciar (libre o con rutina), cambiar de ejercicio, registrar series con prellenado del último registro, cronómetro de descanso con notificación local — `features/workouts/session/`.
+- [x] Historial de sesiones + gráficas de volumen y 1RM estimado por ejercicio (`fl_chart`) — `features/workouts/history/`.
+- [ ] **Pendiente real**: usarla en el gimnasio. El criterio de terminado de la fase (docs/02-roadmap.md) es de uso — tres sesiones reales — no de compilación.
+- **Deuda técnica anotada, no bloqueante**: sin pruebas de widget para las pantallas nuevas (la lógica que rompe en silencio —upsert, volumen, 1RM, regla de sesión única— ya está probada en `domain`/`data`; las pantallas se validaron con `flutter analyze` + compilación real). El cronómetro de descanso usa `inexactAllowWhileIdle` (sin permiso de alarma exacta): puede atrasarse si el teléfono entra en Doze con la pantalla apagada — aceptable para un descanso de gimnasio, no verificado en un dispositivo real todavía.
 
-**Regla de oro: una fase a la vez.** No se empieza la siguiente hasta que la actual cumpla su criterio de terminado y la CI esté en verde. Si al implementar la Fase 1 detectas algo de la Fase 2, anótalo en el roadmap y sigue. No lo implementes.
+**Regla de oro: una fase a la vez.** No se empieza la siguiente hasta que la actual cumpla su criterio de terminado y la CI esté en verde. Si al implementar una fase detectas algo de la siguiente, anótalo en el roadmap y sigue. No lo implementes.
 
 ---
 

@@ -1,4 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter NO la agrega por defecto. Sin esto, cualquier petición de
+         red (imágenes del catálogo ahora; USDA/Open Food Facts/Claude en
+         fases futuras) falla en el sistema operativo antes de llegar a
+         Dart — sin excepción visible, así que es fácil no notarlo hasta
+         que alguien prueba la app de verdad en un dispositivo. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Para el cronómetro de descanso (flutter_local_notifications):
+         reprograma la notificación pendiente si el celular se reinicia
+         mientras hay un descanso en curso. POST_NOTIFICATIONS y VIBRATE
+         ya los agrega el propio plugin (v16+), no hace falta repetirlos. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="fit_tracker"
         android:name="${applicationName}"
@@ -30,6 +41,18 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Requeridos por flutter_local_notifications para el cronómetro
+             de descanso: entregan la notificación programada y la
+             reprograman si el celular se reinició mientras estaba pendiente. -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

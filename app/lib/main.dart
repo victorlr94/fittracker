@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/db/database_provider.dart';
+import 'core/notifications/rest_timer_notifications.dart';
+import 'data/local/catalog_provider.dart';
 import 'features/meals/meals_placeholder.dart';
 import 'features/recipes/recipes_placeholder.dart';
 import 'features/settings/settings_page.dart';
-import 'features/workouts/workouts_placeholder.dart';
+import 'features/workouts/workouts_home_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // El cronómetro de descanso es una mejora de UX, no algo crítico: si
+  // falla al inicializar (permiso denegado, plugin no disponible), la
+  // app sigue funcionando sin notificación de fondo.
+  try {
+    await RestTimerNotifications.initialize();
+  } catch (_) {
+    // silenciado a propósito
+  }
   runApp(const ProviderScope(child: FitTrackerApp()));
 }
 
@@ -42,7 +53,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
   int _index = 0;
 
   static const _pages = [
-    WorkoutsPlaceholderPage(),
+    WorkoutsHomePage(),
     MealsPlaceholderPage(),
     RecipesPlaceholderPage(),
     SettingsPage(),
@@ -51,8 +62,13 @@ class _AppShellState extends ConsumerState<_AppShell> {
   @override
   Widget build(BuildContext context) {
     final dbReady = ref.watch(databaseReadyProvider);
+    final catalogReady = ref.watch(catalogSeededProvider);
+    // Ambos deben resolver antes de mostrar la UI: la BD tiene que abrir
+    // Y el catálogo (Fase 1) tiene que estar sembrado — de lo contrario
+    // el catálogo de ejercicios se ve vacío en el primer arranque.
+    final ready = _combine(dbReady, catalogReady);
 
-    return dbReady.when(
+    return ready.when(
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
@@ -61,7 +77,7 @@ class _AppShellState extends ConsumerState<_AppShell> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'No se pudo abrir la base de datos:\n$error',
+              'No se pudo iniciar la app:\n$error',
               textAlign: TextAlign.center,
             ),
           ),
@@ -97,5 +113,17 @@ class _AppShellState extends ConsumerState<_AppShell> {
         ),
       ),
     );
+  }
+
+  /// Combina dos `AsyncValue<void>` en uno: en carga si cualquiera lo
+  /// está, en error con el primer error que aparezca, listo solo si
+  /// ambos lo están. Riverpod no trae esto para `void` de fábrica.
+  AsyncValue<void> _combine(AsyncValue<void> a, AsyncValue<void> b) {
+    if (a is AsyncError) return a;
+    if (b is AsyncError) return b;
+    if (a is AsyncLoading || b is AsyncLoading) {
+      return const AsyncLoading<void>();
+    }
+    return const AsyncData<void>(null);
   }
 }
