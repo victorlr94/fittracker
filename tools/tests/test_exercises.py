@@ -4,7 +4,11 @@ docs/03-ingesta-de-datos.md § Validaciones)."""
 
 import pytest
 
-from fittracker_data.exercises import ExerciseValidationError, normalize_exercises
+from fittracker_data.exercises import (
+    ExerciseValidationError,
+    attach_spanish_names,
+    normalize_exercises,
+)
 
 RAW_BENCH_PRESS = {
     "id": "Barbell_Bench_Press",
@@ -31,7 +35,7 @@ def test_normaliza_un_ejercicio_valido() -> None:
     assert exercise.source == "free-exercise-db"
     assert exercise.source_id == "Barbell_Bench_Press"
     assert exercise.name == "Barbell Bench Press"
-    assert exercise.primary_muscles == ["chest"]
+    assert exercise.primary_muscles == ["Pecho"]  # traducido (translations.py)
     assert exercise.instructions == ["Lie on the bench.", "Press the bar up."]
     assert exercise.image_urls == [
         "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg",
@@ -81,3 +85,21 @@ def test_orden_de_salida_es_estable_por_source_id() -> None:
     result = normalize_exercises(raws)
 
     assert [e.source_id for e in result] == ["A_primero", "M_medio", "Z_ultimo"]
+
+
+def test_attach_spanish_names_combina_por_source_id() -> None:
+    [exercise] = normalize_exercises([RAW_BENCH_PRESS])
+    translations = {"Barbell_Bench_Press": "Press de banca con barra"}
+
+    [result] = attach_spanish_names([exercise], translations)
+
+    assert result.name_es == "Press de banca con barra"
+    assert result.name == "Barbell Bench Press"  # el original no se toca
+
+
+def test_attach_spanish_names_sin_traduccion_deja_none() -> None:
+    [exercise] = normalize_exercises([RAW_BENCH_PRESS])
+
+    [result] = attach_spanish_names([exercise], translations={})
+
+    assert result.name_es is None

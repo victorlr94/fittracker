@@ -17,7 +17,10 @@ from fittracker_data.config import (
     FREE_EXERCISE_DB_REPO,
 )
 from fittracker_data.download import fetch_latest_commit_sha
-from fittracker_data.exercises import build_exercises_catalog
+from fittracker_data.exercises import (
+    attach_spanish_names,
+    fetch_and_normalize_exercises,
+)
 from fittracker_data.manifest import (
     DatasetManifestEntry,
     sha256_of_bytes,
@@ -37,7 +40,16 @@ def _dump_json_deterministic(rows: list[dict[str, object]]) -> bytes:
 
 
 def build_exercises() -> DatasetManifestEntry:
-    rows = build_exercises_catalog()
+    exercises = fetch_and_normalize_exercises()
+
+    # Import diferido: solo hace falta la API de Claude (y una key) aquí,
+    # no en el resto del pipeline ni en las pruebas.
+    from fittracker_data.translate import translate_exercise_names
+
+    translations = translate_exercise_names([(e.source_id, e.name) for e in exercises])
+    exercises = attach_spanish_names(exercises, translations)
+
+    rows = [e.to_row() for e in exercises]
     payload = _dump_json_deterministic(rows)
 
     output_path = CATALOG_OUTPUT_DIR / "exercises.json"

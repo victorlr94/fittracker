@@ -28,4 +28,5 @@ FREE_EXERCISE_DB_IMAGE_BASE_URL = (
 # Versión del catálogo que se compara contra app_setting.catalog_version_*
 # en el dispositivo. Se sube a mano cuando el contenido cambia de forma
 # que amerite resembrar (no cada vez que se regenera el archivo).
-EXERCISES_CATALOG_VERSION = 1
+# v2: nombres, equipo y músculos traducidos al español.
+EXERCISES_CATALOG_VERSION = 2

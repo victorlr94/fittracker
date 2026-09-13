@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from fittracker_data.config import (
@@ -18,6 +18,7 @@ from fittracker_data.config import (
     FREE_EXERCISE_DB_JSON_URL,
 )
 from fittracker_data.download import download_text
+from fittracker_data.translations import translate_equipment, translate_muscles
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class NormalizedExercise:
     secondary_muscles: list[str]
     instructions: list[str]
     image_urls: list[str]
+    name_es: str | None = None
 
     def to_row(self) -> dict[str, Any]:
         """Fila lista para exportar — claves snake_case idénticas al esquema."""
@@ -55,6 +57,7 @@ class NormalizedExercise:
             "source": self.source,
             "source_id": self.source_id,
             "name": self.name,
+            "name_es": self.name_es,
             "force": self.force,
             "level": self.level,
             "mechanic": self.mechanic,
@@ -89,10 +92,10 @@ def _normalize_one(raw: dict[str, Any]) -> NormalizedExercise:
         force=raw.get("force"),
         level=raw.get("level"),
         mechanic=raw.get("mechanic"),
-        equipment=raw.get("equipment"),
+        equipment=translate_equipment(raw.get("equipment")),
         category=raw.get("category"),
-        primary_muscles=list(raw.get("primaryMuscles") or []),
-        secondary_muscles=list(raw.get("secondaryMuscles") or []),
+        primary_muscles=translate_muscles(list(raw.get("primaryMuscles") or [])),
+        secondary_muscles=translate_muscles(list(raw.get("secondaryMuscles") or [])),
         instructions=instructions,
         image_urls=image_urls,
     )
@@ -142,8 +145,10 @@ def normalize_exercises(
     return normalized
 
 
-def build_exercises_catalog() -> list[dict[str, Any]]:
-    """Descarga, normaliza y devuelve las filas listas para exportar."""
+def fetch_and_normalize_exercises() -> list[NormalizedExercise]:
+    """Descarga y normaliza, sin traducir nombres todavía (eso pega a una
+    API externa — ver translate.py — y por eso queda fuera de esta
+    función, que es la que prueban los tests sin red)."""
     raw_text = download_text(
         FREE_EXERCISE_DB_JSON_URL, cache_name="free-exercise-db.json"
     )
@@ -153,4 +158,16 @@ def build_exercises_catalog() -> list[dict[str, Any]]:
 
     normalized = normalize_exercises(raw_exercises)
     logger.info("Catálogo de ejercicios: %d filas normalizadas", len(normalized))
-    return [exercise.to_row() for exercise in normalized]
+    return normalized
+
+
+def attach_spanish_names(
+    exercises: list[NormalizedExercise], translations: dict[str, str]
+) -> list[NormalizedExercise]:
+    """Combina las traducciones de `name` ya obtenidas (por `source_id`)
+    en `name_es`. Pura: no llama a ninguna API, por eso es lo que se
+    prueba — la llamada real vive en translate.py."""
+    return [
+        replace(exercise, name_es=translations.get(exercise.source_id))
+        for exercise in exercises
+    ]
